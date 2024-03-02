@@ -9,16 +9,16 @@ namespace SteamMarketVend
     {
         private readonly static Logger Logger = new();
 
+        private static long STEAM_ID;
+
+        private static uint APP_ID;
+        private static uint CONTEXT_ID;
+
+        private static string COUNTRY = "";
+        private static uint CURRENCY;
+
         private static bool QUICK;
         private static bool FOIL;
-
-        private const long STEAM_ID = 76561199035536243;
-
-        private const uint APP_ID = 753;
-        private const uint CONTEXT_ID = 6;
-
-        private const string COUNTRY = "TR";
-        private const uint CURRENCY = 1;
 
         #region Cookie
 
@@ -41,61 +41,72 @@ namespace SteamMarketVend
 
         private static List<ICookie> Cookie = new();
 
-        public static void Main()
+        public static void Main(string[] A)
         {
-            #region QUICK
+            Console.Title = "$ ";
 
-            Console.Write("QUICK: ");
-
-            QUICK = Console.ReadKey(true).Key == ConsoleKey.Enter;
-
-            #endregion
-
-            #region FOIL
-
-            Console.Clear();
-
-            Console.Write("FOIL: ");
-
-            FOIL = Console.ReadKey(true).Key == ConsoleKey.Enter;
-
-            #endregion
-
-            Console.Clear();
-
-            Console.Title = $"$ QUICK: {QUICK} | FOIL: {FOIL}".ToUpper();
-
-        Retry:
-
-            Console.Clear();
-
-            string? JSON = "", Line;
-
-            while (!string.IsNullOrWhiteSpace(Line = Console.ReadLine()))
+            if (A.Length >= 5)
             {
-                JSON += Line;
-            }
+                STEAM_ID = long.Parse(A[0]);
+                APP_ID = uint.Parse(A[1]);
+                CONTEXT_ID = uint.Parse(A[2]);
+                COUNTRY = A[3];
+                CURRENCY = uint.Parse(A[4]);
 
-            if (Logger.Helper.IsValidJson(JSON))
-            {
-                var X = JsonConvert.DeserializeObject<List<ICookie>>(JSON);
+                #region QUICK
 
-                if (X == null || X.Count == 0)
+                Console.Write("QUICK: ");
+
+                QUICK = Console.ReadKey(true).Key == ConsoleKey.Enter;
+
+                #endregion
+
+                #region FOIL
+
+                Console.Clear();
+
+                Console.Write("FOIL: ");
+
+                FOIL = Console.ReadKey(true).Key == ConsoleKey.Enter;
+
+                #endregion
+
+                Console.Clear();
+
+                Console.Title = $"$ QUICK: {QUICK} | FOIL: {FOIL}".ToUpper();
+
+            Retry:
+
+                Console.Clear();
+
+                string? JSON = "", Line;
+
+                while (!string.IsNullOrWhiteSpace(Line = Console.ReadLine()))
+                {
+                    JSON += Line;
+                }
+
+                if (Logger.Helper.IsValidJson(JSON))
+                {
+                    var X = JsonConvert.DeserializeObject<List<ICookie>>(JSON);
+
+                    if (X == null || X.Count == 0)
+                    {
+                        goto Retry;
+                    }
+
+                    Cookie = X;
+                }
+                else
                 {
                     goto Retry;
                 }
 
-                Cookie = X;
-            }
-            else
-            {
-                goto Retry;
-            }
+                Console.Title = "$ ";
+                Console.Clear();
 
-            Console.Title = "$ ";
-            Console.Clear();
-
-            _ = Inventory();
+                _ = Inventory();
+            }
 
             Console.ReadLine();
         }
