@@ -9,13 +9,10 @@ namespace SteamMarketVend
     {
         private readonly static Logger Logger = new();
 
-        private static long STEAM_ID;
+        private static readonly string ConfigDirectory = "config";
+        private static readonly string ConfigFile = Path.Combine(ConfigDirectory, "config.json");
 
-        private static uint APP_ID;
-        private static uint CONTEXT_ID;
-
-        private static string COUNTRY = "";
-        private static uint CURRENCY;
+        private static IConfig? Config;
 
         private static bool QUICK;
         private static bool FOIL;
@@ -41,72 +38,69 @@ namespace SteamMarketVend
 
         private static List<ICookie> Cookie = new();
 
-        public static void Main(string[] A)
+        public static void Main()
         {
             Console.Title = "$ ";
 
-            if (A.Length >= 5)
+            (string? ErrorMessage, Config) = IConfig.Load(ConfigDirectory, ConfigFile);
+
+            if (Config == null)
             {
-                STEAM_ID = long.Parse(A[0]);
-                APP_ID = uint.Parse(A[1]);
-                CONTEXT_ID = uint.Parse(A[2]);
-                COUNTRY = A[3];
-                CURRENCY = uint.Parse(A[4]);
+                Logger.LogGenericError(ErrorMessage);
 
-                #region QUICK
+                return;
+            }
 
-                Console.Write("QUICK: ");
+            #region QUICK
 
-                QUICK = Console.ReadKey(true).Key == ConsoleKey.Enter;
+            Console.Write("QUICK: ");
 
-                #endregion
+            QUICK = Console.ReadKey(true).Key == ConsoleKey.Enter;
 
-                #region FOIL
+            #endregion
 
-                Console.Clear();
+            #region FOIL
 
-                Console.Write("FOIL: ");
+            Console.Clear();
 
-                FOIL = Console.ReadKey(true).Key == ConsoleKey.Enter;
+            Console.Write("FOIL: ");
 
-                #endregion
+            FOIL = Console.ReadKey(true).Key == ConsoleKey.Enter;
 
-                Console.Clear();
+            #endregion
 
-                Console.Title = $"$ QUICK: {QUICK} | FOIL: {FOIL}".ToUpper();
+            Console.Clear();
 
-            Retry:
+        Retry:
 
-                Console.Clear();
+            Console.Clear();
 
-                string? JSON = "", Line;
+            string? JSON = "", Line;
 
-                while (!string.IsNullOrWhiteSpace(Line = Console.ReadLine()))
-                {
-                    JSON += Line;
-                }
+            while (!string.IsNullOrWhiteSpace(Line = Console.ReadLine()))
+            {
+                JSON += Line;
+            }
 
-                if (Logger.Helper.IsValidJson(JSON))
-                {
-                    var X = JsonConvert.DeserializeObject<List<ICookie>>(JSON);
+            if (Logger.Helper.IsValidJson(JSON))
+            {
+                var X = JsonConvert.DeserializeObject<List<ICookie>>(JSON);
 
-                    if (X == null || X.Count == 0)
-                    {
-                        goto Retry;
-                    }
-
-                    Cookie = X;
-                }
-                else
+                if (X == null || X.Count == 0)
                 {
                     goto Retry;
                 }
 
-                Console.Title = "$ ";
-                Console.Clear();
-
-                _ = Inventory();
+                Cookie = X;
             }
+            else
+            {
+                goto Retry;
+            }
+
+            Console.Clear();
+
+            _ = Inventory();
 
             Console.ReadLine();
         }
@@ -315,7 +309,7 @@ namespace SteamMarketVend
 
                 while (Work)
                 {
-                    var Request = new RestRequest($"https://steamcommunity.com/inventory/{STEAM_ID}/{APP_ID}/{CONTEXT_ID}?count=5000{(StartAssetID > 0 ? $"&start_assetid={StartAssetID}" : "")}");
+                    var Request = new RestRequest($"https://steamcommunity.com/inventory/{Config!.SteamID}/{Config!.AppID}/{Config!.ContextID}?count=5000{(StartAssetID > 0 ? $"&start_assetid={StartAssetID}" : "")}");
 
                     for (byte i = 0; i < 3; i++)
                     {
@@ -523,9 +517,9 @@ namespace SteamMarketVend
                 catch { }
             }
 
-            Request.AddParameter("country", COUNTRY);
-            Request.AddParameter("currency", CURRENCY);
-            Request.AddParameter("appid", APP_ID);
+            Request.AddParameter("country", Config!.Country);
+            Request.AddParameter("currency", Config!.Currency);
+            Request.AddParameter("appid", Config!.AppID);
             Request.AddParameter("market_hash_name", MarketHashName);
 
             for (byte i = 0; i < 3; i++)
@@ -665,8 +659,8 @@ namespace SteamMarketVend
                 catch { }
             }
 
-            Request.AddParameter("appid", APP_ID);
-            Request.AddParameter("contextid", CONTEXT_ID);
+            Request.AddParameter("appid", Config!.AppID);
+            Request.AddParameter("contextid", Config!.ContextID);
             Request.AddParameter("assetid", AssetID);
             Request.AddParameter("amount", 1);
             Request.AddParameter("price", Price);
@@ -676,7 +670,7 @@ namespace SteamMarketVend
                 Request.AddParameter(T.Name, T.Value);
             }
 
-            Request.AddHeader("referer", $"https://steamcommunity.com/profiles/{STEAM_ID}/inventory");
+            Request.AddHeader("referer", $"https://steamcommunity.com/profiles/{Config!.SteamID}/inventory");
 
             for (byte i = 0; i < 3; i++)
             {
